@@ -1,0 +1,17 @@
+fetch the images and videos
+custom theme
+provider
+image & video viewer
+image & video editer
+privacy
+album screen
+favoratie screen
+videos screen
+screen screen
+select screen
+trash screen
+column grid zoom in and zoom out with animation
+proper error handling
+proper directory structure and documention
+better ui and animation
+when new folder added then background notifications
