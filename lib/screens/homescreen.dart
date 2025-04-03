@@ -14,7 +14,6 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pageProvider=context.watch<PageProvider>();
-
     return Scaffold(
       body: PageView(
         controller: pageProvider.pageController,

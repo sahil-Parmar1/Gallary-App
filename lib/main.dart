@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:gallary_app/functions.dart';
 import 'package:gallary_app/providerdirectory/Pageprovider.dart';
 import 'package:gallary_app/screens/homescreen.dart';
 import "package:provider/provider.dart";
 
 
-void main() {
+void main()async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await startups();
   runApp(ChangeNotifierProvider(
       create: (_)=>PageProvider(),
       child: const MyApp()));
