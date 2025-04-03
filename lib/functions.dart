@@ -1,8 +1,11 @@
 import 'dart:io';
+import 'package:gallary_app/hivestorage/media.dart';
+import 'package:gallary_app/providerdirectory/mediaprovider.dart';
 import "package:shared_preferences/shared_preferences.dart";
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as pathforextract;
+import 'package:provider/provider.dart';
+
 //class that handle all shared preference tasks
 class sharedpref
 {
@@ -44,7 +47,7 @@ Future<void> requestPermission() async {
   }
 }
 
-// Function to get storage location (Android & iOS)
+/// Function to get storage location (Android & iOS)
 Future<void> getDeviceLocation() async {
   List<String> storageDirs = [];
   List<Directory> directories = [];
@@ -72,20 +75,48 @@ Future<void> getDeviceLocation() async {
 }
 
 
-// Function to run at app startup
-Future<void> startups() async {
-  List<String> deviceLocations = await sharedpref.gettosharedlist("deviceLocations");
 
-  if (deviceLocations.isEmpty) {
-    print("device location is empty");
-    await Future.wait([
-      requestPermission(),  // Runs first
-      getDeviceLocation()   // Runs at the same time
-    ]);
 
-  }
-  else
+
+///fecth the song list
+Future<void> fetchSongslist(context) async {
+  List<String> deviceLocations=await sharedpref.gettosharedlist("deviceLocations");
+final mediaProvider=Provider.of<MediaListProvider>(context,listen:false);
+  for (String path in deviceLocations) {
+    await for (String song in fetchMedia(path))
     {
-      print("$deviceLocations");
+      print("song ==>$song");
+       Media newmedia=Media(path: song);
+       mediaProvider.addMedia(newmedia);
     }
+    print("all Image/Video are fecthed....");
+  }
+}
+
+///fectching media
+Stream<String> fetchMedia(String path) async* {
+  Directory directory = Directory(path);
+  yield* getMedia(directory);
+}
+
+/// Define a set of supported extensions for quick lookup
+const Set<String> supportedExtensions = {
+  '.jpg', '.jpeg', '.png', '.bmp', '.webp',  // Image formats
+  '.mp4', '.m4v', '.mov', '.webm'            // Video formats
+};
+/// Recursively find songs in directories
+Stream<String> getMedia(Directory dir) async* {
+  try {
+    await for (var entity in dir.list(recursive: false, followLinks: false)) {
+      if (entity is Directory) {
+        yield* getMedia(entity);
+      } else if (entity is File) {
+        String extension=entity.path.toLowerCase().split('.').last;
+       if(supportedExtensions.contains('.$extension'))
+        yield entity.path;
+      }
+    }
+  } catch (e) {
+   // print("Skipping inaccessible directory: ${dir.path}, Error: $e");
+  }
 }

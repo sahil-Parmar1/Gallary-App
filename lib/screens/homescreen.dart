@@ -2,6 +2,7 @@ import "package:flutter/material.dart";
 import 'package:bottom_bar/bottom_bar.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:gallary_app/providerdirectory/Pageprovider.dart';
+import 'package:gallary_app/screens/medialist.dart';
 import 'package:provider/provider.dart';
 
 
@@ -18,7 +19,7 @@ class HomeScreen extends StatelessWidget {
       body: PageView(
         controller: pageProvider.pageController,
         children: [
-          Container(color: Colors.blue),
+          MediaListScreen(),
           Container(color: Colors.red),
           Container(color: Colors.greenAccent.shade700),
           Container(color: Colors.orange),
