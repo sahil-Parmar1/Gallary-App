@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:gallary_app/functions.dart';
 import 'package:gallary_app/providerdirectory/mediaprovider.dart';
 import 'package:provider/provider.dart';
 import 'package:gallary_app/hivestorage/media.dart';
@@ -21,35 +22,74 @@ class MediaListScreen extends StatelessWidget
       {
         return const Center(child: Text("No media Found"),);
       }
-    return GridView.builder(
-       padding: const EdgeInsets.all(8),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: 5,
-            mainAxisSpacing: 5,
-            childAspectRatio: 1,
+    return CustomScrollView(
+      slivers: [
+        SliverAppBar(
+          pinned: false,
+          floating: true,
+          snap: true,
+          expandedHeight: 50.0,
+          flexibleSpace: FlexibleSpaceBar(
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(10.0),
+                  child: Text("Pictures"),
+                ),
+                 Row(
+                   children: [
+                     IconButton(onPressed: (){}, icon: Icon(CupertinoIcons.sort_down)),
+                     IconButton(onPressed: (){}, icon: Icon(CupertinoIcons.search)),
+                   ],
+                 ),
+              ],
+            ),
+            centerTitle: true,
+          ),
         ),
-        itemCount: mediaProvider.MediaList.length,
-        itemBuilder: (context,index){
-          Media media=mediaProvider.MediaList[index];
-          return Image.file(
-            File(media.path),
-            width: 150,
-            height: 150,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
+        SliverPadding(
+          padding: const EdgeInsets.all(8),
+          sliver: SliverGrid(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 5,
+              mainAxisSpacing: 5,
+              childAspectRatio: 1,
+            ),
+            delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                Media media = mediaProvider.MediaList[index];
+                return GestureDetector(
+                  onTap: () async {
+                    // var file = File(media.path);
+                    // await readImageMetadata(file);
+                  },
+                  child: Image.file(
+                    File(media.path),
+                    width: 150,
+                    height: 150,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: 150,
+                        height: 150,
+                        color: Colors.grey,
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.broken_image, color: Colors.white),
+                      );
+                    },
+                  ),
+                );
+              },
+              childCount: mediaProvider.MediaList.length,
+            ),
+          ),
+        ),
+      ],
+    );
 
-              return Container(
-                width: 150,
-                height: 150,
-                color: Colors.grey,
-                alignment: Alignment.center,
-                child: const Icon(Icons.broken_image, color: Colors.white),
-              );
-            },
-          );
 
-        });
 
 
 

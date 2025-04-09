@@ -7,6 +7,8 @@ import "package:shared_preferences/shared_preferences.dart";
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:exif/exif.dart';
+
 
 
 //class that handle all shared preference tasks
@@ -94,10 +96,27 @@ Future<void> fetchSongslist(BuildContext context) async {
   await Isolate.spawn(_mediaScanIsolate, [receivePort.sendPort, deviceLocations]);
 
   // Listen to incoming file paths
-  receivePort.listen((message) {
+  receivePort.listen((message) async{
     if (message != 'done') {
       // New media path received
-      mediaProvider.addMedia(Media(path: message));
+        var file=File(message);
+        Map<String, dynamic> data = await readImageMetadata(file);
+        Media newMedia = Media(
+          path: message, // Your image path
+          model: data['model'],
+          make: data['make'],
+          width: data['width'],
+          height: data['height'],
+          orientation: data['orientation'],
+          dateCreated: data['date_created'],
+          timeCreated: data['time_created'],
+          fNumber: data['f_number'],
+          isoSpeed: data['iso_speed'],
+          flash: data['flash'],
+          focalLength: data['focal_length'],
+        );
+        mediaProvider.addMedia(newMedia);
+        print("time of created : ${newMedia.dateCreated}");
       print("message recieved from isolate : $message");
     } else if (message == 'done') {
       // All media paths are sent
@@ -158,3 +177,54 @@ const Set<String> supportedExtensions = {
   '.jpg', '.jpeg', '.png', '.bmp', '.webp',  // Image formats
   '.mp4', '.m4v', '.mov', '.webm'            // Video formats
 };
+
+
+///read image metadata
+
+
+
+Future<Map<String,dynamic>> readImageMetadata(File imageFile) async {
+  final bytes = await imageFile.readAsBytes();
+  final tags = await readExifFromBytes(bytes);
+
+  if (tags.isEmpty) {
+    print('No EXIF data found');
+    return {};
+  }
+
+  // Helper to get tag safely
+  String getTag(String key) => tags.containsKey(key) ? tags[key]!.printable : 'N/A';
+
+  // Format date and time
+  String fullDateTime = getTag('EXIF DateTimeOriginal');
+  String date = 'N/A';
+  String time = 'N/A';
+
+  if (fullDateTime.contains(' ')) {
+    final parts = fullDateTime.split(' ');
+    final dateParts = parts[0].split(':'); // yyyy:MM:dd
+
+    if (dateParts.length == 3) {
+      // Format to dd-MM-yyyy
+      date = '${dateParts[2]}-${dateParts[1]}-${dateParts[0]}';
+    }
+
+    time = parts[1]; // HH:mm:ss
+  }
+
+  Map<String, dynamic> imageInfo = {
+    'model': getTag('Image Model'),
+    'make': getTag('Image Make'),
+    'width': getTag('EXIF ExifImageWidth'),
+    'height': getTag('EXIF ExifImageLength'),
+    'orientation': getTag('Image Orientation'),
+    'date_created': date,
+    'time_created': time,
+    'f_number': getTag('EXIF FNumber'),
+    'iso_speed': getTag('EXIF ISOSpeedRatings'),
+    'flash': getTag('EXIF Flash'),
+    'focal_length': getTag('EXIF FocalLength'),
+  };
+  return imageInfo;
+}
+

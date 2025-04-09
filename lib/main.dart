@@ -51,7 +51,6 @@ class _MyAppState extends State<MyApp> {
      else
      {
        print("$deviceLocations");
-       fetchSongslist(context);
      }
    }
   @override
