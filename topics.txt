@@ -10,6 +10,9 @@ videos screen
 screen screen
 select screen
 trash screen
+use isolates in for fecthing the images
+add lazy loading when fecthing
+use for testing photo_manager instead of scanning manually
 column grid zoom in and zoom out with animation
 proper error handling
 proper directory structure and documention

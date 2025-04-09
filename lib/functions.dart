@@ -1,10 +1,13 @@
 import 'dart:io';
+import 'dart:isolate';
+import 'package:flutter/cupertino.dart';
 import 'package:gallary_app/hivestorage/media.dart';
 import 'package:gallary_app/providerdirectory/mediaprovider.dart';
 import "package:shared_preferences/shared_preferences.dart";
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+
 
 //class that handle all shared preference tasks
 class sharedpref
@@ -76,47 +79,82 @@ Future<void> getDeviceLocation() async {
 
 
 
+///with isolate
+Future<void> fetchSongslist(BuildContext context) async {
+  List<String> deviceLocations = await sharedpref.gettosharedlist("deviceLocations");
+  final mediaProvider = Provider.of<MediaListProvider>(context, listen: false);
 
+  // Show shimmer
+  mediaProvider.setLoading(true);
 
-///fecth the song list
-Future<void> fetchSongslist(context) async {
-  List<String> deviceLocations=await sharedpref.gettosharedlist("deviceLocations");
-final mediaProvider=Provider.of<MediaListProvider>(context,listen:false);
-  for (String path in deviceLocations) {
-    await for (String song in fetchMedia(path))
-    {
-      print("song ==>$song");
-       Media newmedia=Media(path: song);
-       mediaProvider.addMedia(newmedia);
+  // Create ReceivePort to get data from isolate
+  final ReceivePort receivePort = ReceivePort();
+
+  // Spawn isolate
+  await Isolate.spawn(_mediaScanIsolate, [receivePort.sendPort, deviceLocations]);
+
+  // Listen to incoming file paths
+  receivePort.listen((message) {
+    if (message != 'done') {
+      // New media path received
+      mediaProvider.addMedia(Media(path: message));
+      print("message recieved from isolate : $message");
+    } else if (message == 'done') {
+      // All media paths are sent
+      mediaProvider.setLoading(false);
+      receivePort.close(); // Stop listening
     }
-    print("all Image/Video are fecthed....");
+  });
+}
+
+
+void _mediaScanIsolate(List<dynamic> args) async {
+  SendPort sendPort = args[0];
+  List<String> deviceLocations = List<String>.from(args[1]);
+
+  print("Media isolate started");
+
+  for (String rootPath in deviceLocations) {
+    try {
+      await for (final path in _safeRecursiveScanStream(Directory(rootPath))) {
+        sendPort.send(path); // Send file path immediately
+      }
+    } catch (e) {
+      print("Skipping inaccessible root directory: $rootPath");
+    }
+  }
+
+  sendPort.send('done'); // Let main isolate know scanning is done
+}
+
+
+Stream<String> _safeRecursiveScanStream(Directory dir) async* {
+  try {
+    await for (var entity in dir.list(recursive: false, followLinks: false)) {
+      if (entity is Directory) {
+        try {
+          yield* _safeRecursiveScanStream(entity); // Recurse safely
+        } catch (e) {
+          print("Skipped inaccessible subdirectory: ${entity.path}");
+        }
+      } else if (entity is File) {
+        String extension = entity.path.toLowerCase().split('.').last;
+        if (supportedExtensions.contains('.$extension')) {
+          yield entity.path;
+        }
+      }
+    }
+  } catch (e) {
+    print("Error accessing directory ${dir.path}: $e");
   }
 }
 
-///fectching media
-Stream<String> fetchMedia(String path) async* {
-  Directory directory = Directory(path);
-  yield* getMedia(directory);
-}
+
+
+
 
 /// Define a set of supported extensions for quick lookup
 const Set<String> supportedExtensions = {
   '.jpg', '.jpeg', '.png', '.bmp', '.webp',  // Image formats
   '.mp4', '.m4v', '.mov', '.webm'            // Video formats
 };
-/// Recursively find songs in directories
-Stream<String> getMedia(Directory dir) async* {
-  try {
-    await for (var entity in dir.list(recursive: false, followLinks: false)) {
-      if (entity is Directory) {
-        yield* getMedia(entity);
-      } else if (entity is File) {
-        String extension=entity.path.toLowerCase().split('.').last;
-       if(supportedExtensions.contains('.$extension'))
-        yield entity.path;
-      }
-    }
-  } catch (e) {
-   // print("Skipping inaccessible directory: ${dir.path}, Error: $e");
-  }
-}

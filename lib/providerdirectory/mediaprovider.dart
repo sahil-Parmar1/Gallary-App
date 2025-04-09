@@ -6,7 +6,8 @@ class MediaListProvider extends ChangeNotifier
 {
   List<Media> MediaList=[];
   Box<Media> Mediabox;
-
+  bool _isLoading=true;
+  bool get isLoading=>_isLoading;
   MediaListProvider(this.Mediabox){
     _loadMedia();
   }
@@ -28,4 +29,9 @@ class MediaListProvider extends ChangeNotifier
     notifyListeners();
   }
 
+   void setLoading(bool value)
+   {
+     _isLoading=value;
+     notifyListeners();
+   }
 }
