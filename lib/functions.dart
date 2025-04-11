@@ -8,6 +8,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:exif/exif.dart';
+import 'package:intl/intl.dart';
 
 
 
@@ -101,6 +102,7 @@ Future<void> fetchSongslist(BuildContext context) async {
       // New media path received
         var file=File(message);
         Map<String, dynamic> data = await readImageMetadata(file);
+        print("data is that :$data");
         Media newMedia = Media(
           path: message, // Your image path
           model: data['model'],
@@ -110,6 +112,7 @@ Future<void> fetchSongslist(BuildContext context) async {
           orientation: data['orientation'],
           dateCreated: data['date_created'],
           timeCreated: data['time_created'],
+          date:data["date"],
           fNumber: data['f_number'],
           isoSpeed: data['iso_speed'],
           flash: data['flash'],
@@ -180,9 +183,6 @@ const Set<String> supportedExtensions = {
 
 
 ///read image metadata
-
-
-
 Future<Map<String,dynamic>> readImageMetadata(File imageFile) async {
   final bytes = await imageFile.readAsBytes();
   final tags = await readExifFromBytes(bytes);
@@ -212,6 +212,11 @@ Future<Map<String,dynamic>> readImageMetadata(File imageFile) async {
     time = parts[1]; // HH:mm:ss
   }
 
+
+  final dateFormat = DateFormat('yyyy:MM:dd HH:mm:ss');
+  DateTime originalDate = dateFormat.parse(fullDateTime);
+
+
   Map<String, dynamic> imageInfo = {
     'model': getTag('Image Model'),
     'make': getTag('Image Make'),
@@ -220,6 +225,7 @@ Future<Map<String,dynamic>> readImageMetadata(File imageFile) async {
     'orientation': getTag('Image Orientation'),
     'date_created': date,
     'time_created': time,
+    'date':originalDate,
     'f_number': getTag('EXIF FNumber'),
     'iso_speed': getTag('EXIF ISOSpeedRatings'),
     'flash': getTag('EXIF Flash'),

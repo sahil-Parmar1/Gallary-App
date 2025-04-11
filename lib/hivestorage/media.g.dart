@@ -29,13 +29,14 @@ class MediaAdapter extends TypeAdapter<Media> {
       isoSpeed: fields[9] as String?,
       flash: fields[10] as String?,
       focalLength: fields[11] as String?,
+      date: fields[12] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Media obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.path)
       ..writeByte(1)
@@ -59,7 +60,9 @@ class MediaAdapter extends TypeAdapter<Media> {
       ..writeByte(10)
       ..write(obj.flash)
       ..writeByte(11)
-      ..write(obj.focalLength);
+      ..write(obj.focalLength)
+      ..writeByte(12)
+      ..write(obj.date);
   }
 
   @override

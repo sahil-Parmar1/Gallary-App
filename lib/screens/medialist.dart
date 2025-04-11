@@ -22,6 +22,8 @@ class MediaListScreen extends StatelessWidget
       {
         return const Center(child: Text("No media Found"),);
       }
+
+
     return CustomScrollView(
       slivers: [
         SliverAppBar(
@@ -60,10 +62,10 @@ class MediaListScreen extends StatelessWidget
             delegate: SliverChildBuilderDelegate(
                   (context, index) {
                 Media media = mediaProvider.MediaList[index];
+                print("$index on  this image -->>> ${media.dateCreated}");
                 return GestureDetector(
                   onTap: () async {
-                    // var file = File(media.path);
-                    // await readImageMetadata(file);
+
                   },
                   child: Image.file(
                     File(media.path),

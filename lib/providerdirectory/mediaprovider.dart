@@ -6,7 +6,7 @@ class MediaListProvider extends ChangeNotifier
 {
   List<Media> MediaList=[];
   Box<Media> Mediabox;
-  bool _isLoading=true;
+  bool _isLoading=false;
   bool get isLoading=>_isLoading;
   MediaListProvider(this.Mediabox){
     _loadMedia();
@@ -25,6 +25,8 @@ class MediaListProvider extends ChangeNotifier
     }
     Mediabox.add(media); // Save to Hive
     MediaList = Mediabox.values.toList();
+    MediaList.sort((a, b) =>
+        (b.date ?? DateTime(0)).compareTo(a.date ?? DateTime(0)));
     print("${media.path} was  media is added.. contain ${MediaList}");// Update list
     notifyListeners();
   }

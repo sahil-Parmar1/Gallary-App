@@ -40,6 +40,9 @@ class Media extends HiveObject {
   @HiveField(11)
   String? focalLength;
 
+  @HiveField(12)
+  DateTime? date;
+
   Media({
     required this.path,
     this.model,
@@ -53,5 +56,6 @@ class Media extends HiveObject {
     this.isoSpeed,
     this.flash,
     this.focalLength,
+    this.date,
   });
 }
