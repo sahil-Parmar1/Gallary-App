@@ -9,10 +9,11 @@ import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:exif/exif.dart';
 import 'package:intl/intl.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
 
-
-
-//class that handle all shared preference tasks
+///class that handle all shared preference tasks
 class sharedpref
 {
  static void savetoshared(String key,String value)async
@@ -37,7 +38,7 @@ class sharedpref
  }
 }
 
-// Function to request storage permissions
+/// Function to request storage permissions
 Future<void> requestPermission() async {
   if (Platform.isAndroid) {
     if (await Permission.photos.isDenied || await Permission.photos.isPermanentlyDenied) {
@@ -86,25 +87,16 @@ Future<void> getDeviceLocation() async {
 Future<void> fetchSongslist(BuildContext context) async {
   List<String> deviceLocations = await sharedpref.gettosharedlist("deviceLocations");
   final mediaProvider = Provider.of<MediaListProvider>(context, listen: false);
-
-  // Show shimmer
-  mediaProvider.setLoading(true);
-
-  // Create ReceivePort to get data from isolate
-  final ReceivePort receivePort = ReceivePort();
-
-  // Spawn isolate
-  await Isolate.spawn(_mediaScanIsolate, [receivePort.sendPort, deviceLocations]);
-
-  // Listen to incoming file paths
-  receivePort.listen((message) async{
-    if (message != 'done') {
-      // New media path received
-        var file=File(message);
+  // Start scanning using a stream
+  for (String rootPath in deviceLocations) {
+    try {
+      await for (final path in _safeRecursiveScanStream(Directory(rootPath))) {
+        var file = File(path);
         Map<String, dynamic> data = await readImageMetadata(file);
-        print("data is that :$data");
+        print("data is that: $data");
+
         Media newMedia = Media(
-          path: message, // Your image path
+          path: path,
           model: data['model'],
           make: data['make'],
           width: data['width'],
@@ -112,43 +104,22 @@ Future<void> fetchSongslist(BuildContext context) async {
           orientation: data['orientation'],
           dateCreated: data['date_created'],
           timeCreated: data['time_created'],
-          date:data["date"],
+          date: data["date"],
           fNumber: data['f_number'],
           isoSpeed: data['iso_speed'],
           flash: data['flash'],
           focalLength: data['focal_length'],
         );
+
         mediaProvider.addMedia(newMedia);
-        print("time of created : ${newMedia.dateCreated}");
-      print("message recieved from isolate : $message");
-    } else if (message == 'done') {
-      // All media paths are sent
-      mediaProvider.setLoading(false);
-      receivePort.close(); // Stop listening
-    }
-  });
-}
-
-
-void _mediaScanIsolate(List<dynamic> args) async {
-  SendPort sendPort = args[0];
-  List<String> deviceLocations = List<String>.from(args[1]);
-
-  print("Media isolate started");
-
-  for (String rootPath in deviceLocations) {
-    try {
-      await for (final path in _safeRecursiveScanStream(Directory(rootPath))) {
-        sendPort.send(path); // Send file path immediately
+        print("time of created: ${newMedia.dateCreated}");
+        print("media path added: $path");
       }
     } catch (e) {
       print("Skipping inaccessible root directory: $rootPath");
     }
   }
-
-  sendPort.send('done'); // Let main isolate know scanning is done
 }
-
 
 Stream<String> _safeRecursiveScanStream(Directory dir) async* {
   try {
@@ -175,6 +146,7 @@ Stream<String> _safeRecursiveScanStream(Directory dir) async* {
 
 
 
+
 /// Define a set of supported extensions for quick lookup
 const Set<String> supportedExtensions = {
   '.jpg', '.jpeg', '.png', '.bmp', '.webp',  // Image formats
@@ -184,8 +156,12 @@ const Set<String> supportedExtensions = {
 
 ///read image metadata
 Future<Map<String,dynamic>> readImageMetadata(File imageFile) async {
-  final bytes = await imageFile.readAsBytes();
-  final tags = await readExifFromBytes(bytes);
+  final bytes = await imageFile.openRead().fold<BytesBuilder>(
+    BytesBuilder(),
+        (builder, data) => builder..add(data),
+  );
+  final tags = await readExifFromBytes(bytes.takeBytes());
+
 
   if (tags.isEmpty) {
     print('No EXIF data found');
@@ -193,7 +169,14 @@ Future<Map<String,dynamic>> readImageMetadata(File imageFile) async {
   }
 
   // Helper to get tag safely
-  String getTag(String key) => tags.containsKey(key) ? tags[key]!.printable : 'N/A';
+  String getTag(String key) {
+    try {
+      return tags.containsKey(key) ? tags[key]!.printable : 'N/A';
+    } catch (e) {
+      return 'N/A';
+    }
+  }
+
 
   // Format date and time
   String fullDateTime = getTag('EXIF DateTimeOriginal');
@@ -213,8 +196,16 @@ Future<Map<String,dynamic>> readImageMetadata(File imageFile) async {
   }
 
 
-  final dateFormat = DateFormat('yyyy:MM:dd HH:mm:ss');
-  DateTime originalDate = dateFormat.parse(fullDateTime);
+// Safe parse
+  DateTime? originalDate;
+  try {
+    if (fullDateTime != 'N/A') {
+      final dateFormat = DateFormat('yyyy:MM:dd HH:mm:ss');
+      originalDate = dateFormat.parseStrict(fullDateTime);
+    }
+  } catch (e) {
+    print('Error parsing date: $e');
+  }
 
 
   Map<String, dynamic> imageInfo = {
@@ -234,3 +225,24 @@ Future<Map<String,dynamic>> readImageMetadata(File imageFile) async {
   return imageInfo;
 }
 
+
+//function to generate thumbnails
+Future<Widget> buildMediaItem(String path)async
+{
+  final Uint8List? thumbnail=await VideoThumbnail.thumbnailData(video: path,
+  imageFormat: ImageFormat.JPEG,
+    maxWidth: 300,
+    quality: 75
+  );
+  if(thumbnail==null)
+    return const Icon(Icons.error_outline);
+  return Stack(
+    children: [
+      Image.memory(thumbnail,fit: BoxFit.cover,),
+      const Positioned(
+          right: 8,
+          bottom: 8,
+          child: Icon(CupertinoIcons.play,size: 30,color: CupertinoColors.white,)),
+    ],
+  );
+}
