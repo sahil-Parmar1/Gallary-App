@@ -24,6 +24,7 @@ class MediaListProvider extends ChangeNotifier {
 
   void SortbyDate()
   {
+    groupmedia={};
     MediaList.forEach((value){
       String key=value.dateCreated??"unknown";
 
@@ -38,6 +39,7 @@ class MediaListProvider extends ChangeNotifier {
   }
   void SortbyFolder()
   {
+    groupmediafolder={};
     MediaList.forEach((value){
       String fullPath=value.path;
       String parentDir=p.dirname(fullPath);

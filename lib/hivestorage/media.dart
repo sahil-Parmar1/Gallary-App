@@ -43,6 +43,9 @@ class Media extends HiveObject {
   @HiveField(12)
   DateTime? date;
 
+  @HiveField(13)
+  String? thumbnail;
+
   Media({
     required this.path,
     this.model,
@@ -57,5 +60,6 @@ class Media extends HiveObject {
     this.flash,
     this.focalLength,
     this.date,
+    this.thumbnail,
   });
 }

@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:isolate';
 import 'package:flutter/cupertino.dart';
 import 'package:gallary_app/hivestorage/media.dart';
 import 'package:gallary_app/providerdirectory/mediaprovider.dart';
@@ -9,9 +8,13 @@ import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:exif/exif.dart';
 import 'package:intl/intl.dart';
-import 'package:video_thumbnail/video_thumbnail.dart';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:flutter_video_thumbnail_plus/flutter_video_thumbnail_plus.dart';
+
+
+
 
 ///class that handle all shared preference tasks
 class sharedpref
@@ -93,8 +96,6 @@ Future<void> fetchSongslist(BuildContext context) async {
       await for (final path in _safeRecursiveScanStream(Directory(rootPath))) {
         var file = File(path);
         Map<String, dynamic> data = await readImageMetadata(file);
-        print("data is that: $data");
-
         Media newMedia = Media(
           path: path,
           model: data['model'],
@@ -110,10 +111,12 @@ Future<void> fetchSongslist(BuildContext context) async {
           flash: data['flash'],
           focalLength: data['focal_length'],
         );
-
+        if(newMedia.path.endsWith(".mp4"))
+          {
+            final thumbnailpath=await getthumbnails(newMedia);
+            newMedia.thumbnail=thumbnailpath;
+          }
         mediaProvider.addMedia(newMedia);
-        print("time of created: ${newMedia.dateCreated}");
-        print("media path added: $path");
       }
     } catch (e) {
       print("Skipping inaccessible root directory: $rootPath");
@@ -150,7 +153,7 @@ Stream<String> _safeRecursiveScanStream(Directory dir) async* {
 /// Define a set of supported extensions for quick lookup
 const Set<String> supportedExtensions = {
   '.jpg', '.jpeg', '.png', '.bmp', '.webp',  // Image formats
-  '.mp4', '.m4v', '.mov', '.webm'            // Video formats
+  '.mp4',// '.m4v', '.mov', '.webm'            // Video formats
 };
 
 
@@ -225,24 +228,25 @@ Future<Map<String,dynamic>> readImageMetadata(File imageFile) async {
   return imageInfo;
 }
 
-
-//function to generate thumbnails
-Future<Widget> buildMediaItem(String path)async
+///function to get thumbnails from video
+Future<String> getthumbnails(Media media)async
 {
-  final Uint8List? thumbnail=await VideoThumbnail.thumbnailData(video: path,
-  imageFormat: ImageFormat.JPEG,
-    maxWidth: 300,
-    quality: 75
-  );
-  if(thumbnail==null)
-    return const Icon(Icons.error_outline);
-  return Stack(
-    children: [
-      Image.memory(thumbnail,fit: BoxFit.cover,),
-      const Positioned(
-          right: 8,
-          bottom: 8,
-          child: Icon(CupertinoIcons.play,size: 30,color: CupertinoColors.white,)),
-    ],
-  );
+  
+  print("\n\n\n get thumbnails is called...");
+ final docdir=await getApplicationDocumentsDirectory();
+ String name="${media.dateCreated}${media.timeCreated}.png";
+ final thumbnailPath="${docdir.path}/$name";
+ final result=await FlutterVideoThumbnailPlus.thumbnailFile(
+     video: media.path,
+      thumbnailPath: thumbnailPath,
+      maxWidth: 100,
+      maxHeight: 100,
+       timeMs: 1000,
+   quality: 10,
+     imageFormat: ImageFormat.png
+     );
+ if(result!=null)
+   print("\n\n\n  thumbnails is generated....");
+ return thumbnailPath;
 }
+

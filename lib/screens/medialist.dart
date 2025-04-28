@@ -107,22 +107,11 @@ class MediaListScreen extends StatelessWidget
           delegate: SliverChildBuilderDelegate(
                 (context,index){
               final item=mediaProvider.MediaList[index];
-              if(item.path.endsWith(".mp4"))
-                return FutureBuilder(future: buildMediaItem(item.path),
-                    builder: (context,snapshot){
-                    if(snapshot.connectionState==ConnectionState.done && snapshot.hasData)
-                      return ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: snapshot.data!,
-                      );
-                    else
-                      return const Center(child: CircularProgressIndicator(),);
-                    });
-              else
-              return ClipRRect(
+              
+                return ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: Image.file(
-                  File(item.path),
+                  item.path.endsWith(".mp4")?File(item.thumbnail??''):File(item.path),
                   fit: BoxFit.cover,
                   cacheHeight: 300,
                   cacheWidth: 300,
@@ -216,13 +205,15 @@ class MediaListScreen extends StatelessWidget
                  itemBuilder: (context, gridIndex) {
                    final item = mediaItems[gridIndex];
                    return ClipRRect(
-                     borderRadius: BorderRadius.circular(8), // Rounded corners
+                     borderRadius: BorderRadius.circular(8),
                      child: Image.file(
-                       File(item.path),
+                       item.path.endsWith(".mp4")?File(item.thumbnail??''):File(item.path),
                        fit: BoxFit.cover,
                        cacheHeight: 300,
                        cacheWidth: 300,
-                       errorBuilder: (context, error, stackTrace) => const Icon(Icons.error_outline),
+                       errorBuilder: (context,error,stackTrace){
+                         print("=======>erorr on ${item.path} was not supported");
+                         return const Icon(Icons.error_outline);},
                      ),
                    );
                  },
@@ -285,14 +276,42 @@ class MediaListScreen extends StatelessWidget
                   padding: const EdgeInsets.symmetric(horizontal: 8.0), // Add side padding
                   itemBuilder: (context, gridIndex) {
                     final item = mediaItems[gridIndex];
+                    if(item.path.endsWith(".mp4"))
+                      return Stack(
+                        fit: StackFit.expand,
+                        children: [
+
+                          Positioned(
+
+                              child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.file(
+                              File(item.thumbnail??''),
+                              fit: BoxFit.cover,
+                              cacheHeight: 350,
+                              cacheWidth: 350,
+                              errorBuilder: (context,error,stackTrace){
+                                print("=======>erorr on ${item.path} was not supported");
+                                return const Icon(Icons.error_outline);},
+                            ),
+                          )),
+                          Positioned(
+                            top:45,
+                              right:45,
+                              child: Icon(CupertinoIcons.play_circle_fill,size: 40,color: CupertinoColors.white,))
+                        ],
+                      );
+                      else
                     return ClipRRect(
-                      borderRadius: BorderRadius.circular(8), // Rounded corners
+                      borderRadius: BorderRadius.circular(8),
                       child: Image.file(
-                        File(item.path),
+                          File(item.path),
                         fit: BoxFit.cover,
                         cacheHeight: 300,
                         cacheWidth: 300,
-                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.error_outline),
+                        errorBuilder: (context,error,stackTrace){
+                          print("=======>erorr on ${item.path} was not supported");
+                          return const Icon(Icons.error_outline);},
                       ),
                     );
                   },
